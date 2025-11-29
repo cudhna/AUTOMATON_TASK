@@ -1,0 +1,293 @@
+{
+  "name": "AUTOMATION_TASK",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ null }}",
+        "options": {
+          "systemMessage": "=# Bạn là một trợ lý AI có khả năng trả lời các câu hỏi phức tạp từ phía User. Trả lời lại câu hỏi bằng tiếng việt.\n\n## Nhiệm vụ của bạn là nhận thông tin và đưa ra ngắn gọn các thông báo cho User về thời tiết, chất lượng không khí tại Hà Nội và tin tức nóng theo thời gian sau: {{\n(() => {\n  const ts = $node[\"Chất lượng không khí\"]?.json?.list?.[0]?.dt;\n  if (!ts) return \"không có thời gian\";\n\n  const date = new Date(ts * 1000); // đổi giây → milliseconds\n  return date.toLocaleString(\"vi-VN\", {\n    timeZone: \"Asia/Ho_Chi_Minh\",\n    hour12: false\n  });\n})()\n}}\n\n\n## HƯỚNG DẪN ĐÁNH GIÁ CHỈ SỐ CHẤT LƯỢNG KHÔNG KHÍ VÀ THỜI TIẾT\n  1. Đánh giá AQI (1–5 của OpenWeather)\n    1 = Tốt. Không hạn chế.\n    2 = Khá. Có thể ra ngoài bình thường.\n    3 = Trung bình. Nhạy cảm hô hấp nên hạn chế ra ngoài lâu.\n    4 = Xấu. Người bình thường bắt đầu bị khó chịu. Hạn chế vận động ngoài trời.\n    5 = Rất xấu. Tránh tối đa thời gian ngoài trời. Đeo khẩu trang tốt (N95 trở lên).\n\n  2. Đánh giá PM2.5 (μg/m³)\n    0–15 = Tốt.\n    16–35 = Chấp nhận được.\n    36–55 = Kém. Ảnh hưởng phổi, nên hạn chế ra ngoài lâu.\n    56–150 = Xấu. Không vận động mạnh ngoài trời.\n    150 = Rất xấu. Tránh ra ngoài.\n\n  3. Đánh giá PM10 (μg/m³)\n    0–50 = Tốt.\n    51–100 = Trung bình.\n    101–250 = Xấu.\n    250 = Rất xấu.\n\n  4. Đánh giá O₃ (Ozone, μg/m³)\n    <100 = Bình thường.\n    100–160 = Cao nhẹ, gây cay mắt.\n    160 = Không khí nóng, gây khó thở. Hạn chế vận động ngoài trời.\n\n  5. Đánh giá CO, NO, NO₂, SO₂, NH₃\n    - Dưới 50 μg/m³ = mức bình thường.\n    - Trên 100 μg/m³ = bắt đầu gây kích ứng.\n    - Trên 200 μg/m³ = không an toàn cho người có bệnh hô hấp.\n\n  6. Gợi ý thông minh dựa trên dữ liệu\n    - Nếu PM2.5 > 40 → cảnh báo người dùng hạn chế hoạt động ngoài trời, khuyên đeo khẩu trang đạt chuẩn.\n    - Nếu O₃ > 120 và trời nắng → cảnh báo dễ cay mắt, đau họng.\n    - Nếu AQI ≥ 4 → không khuyến khích tập thể dục ngoài trời.\n    - Nếu độ ẩm > 80% + nhiệt độ > 30°C → cảnh báo oi bức, nguy cơ kiệt sức nhiệt.\n    - Nếu tốc độ gió > 10 m/s → gió mạnh, đi xe máy cần cẩn trọng.\n    - Nếu tầm nhìn < 2000 m → cảnh báo sương mù, giảm tốc độ khi di chuyển.\n    - Nếu trời mưa + nhiệt độ thấp → cảnh báo đường trơn.\n    - Nếu có cảnh báo thời tiết (alerts) → ưu tiên đưa thông báo này trước mọi thông tin khác.\n\n  7. Quy tắc phản hồi\n    - Chỉ phản hồi ngắn gọn dựa trên số liệu thật.\n    - Nhận định rõ ràng: tốt, trung bình, xấu, rất xấu.\n    - Luôn đưa ra khuyến nghị phù hợp với điều kiện: mặc gì, có nên ra ngoài, có nên vận động, có cần khẩu trang, có cần mang ô.\n    - Không suy diễn ngoài phạm vi dữ liệu.\n    - Không tạo thông tin giao thông real-time.\n\n## 1. Nhận thông tin thời tiết Hà Nội hiện tại ở đây:\n  - Toạ độ: {{ $node[\"Thời tiết\"].json.coord.lon ?? \"không có thông tin\" }} - {{ $node[\"Thời tiết\"].json.coord.lat ?? \"không có thông tin\" }}\n  - Thời tiết: {{ $node[\"Thời tiết\"].json.weather[0].main ?? \"không có thông tin\" }} - {{ $node[\"Thời tiết\"].json.weather[0].description ?? \"không có thông tin\" }}\n  - Nhiệt độ: \n    - Nhiệt độ hiện tại: {{ $node[\"Thời tiết\"].json.main.temp ?? \"không có thông tin\" }}°C\n    - Cảm giác như: {{ $node[\"Thời tiết\"].json.main.feels_like ?? \"không có thông tin\" }}°C\n    - Nhiệt độ nhỏ nhất: {{ $node[\"Thời tiết\"].json.main.temp_min ?? \"không có thông tin\" }}°C\n    - Nhiệt độ lớn nhất: {{ $node[\"Thời tiết\"].json.main.temp_max ?? \"không có thông tin\" }}°C\n    - Áp suất: {{ $node[\"Thời tiết\"].json.main.pressure ?? \"không có thông tin\" }} hPa\n    - Độ ẩm: {{ $node[\"Thời tiết\"].json.main.humidity ?? \"không có thông tin\" }} %\n    - Áp suất mực nước biển: {{ $node[\"Thời tiết\"].json.main.sea_level ?? \"không có thông tin\" }}\n    - Áp suất mặt đất: {{ $node[\"Thời tiết\"].json.main.grnd_level ?? \"không có thông tin\" }}\n  - Tầm nhìn xa: {{ $node[\"Thời tiết\"].json.visibility ?? \"không có thông tin\" }} m\n  - Tình hình gió:\n    - Tốc độ: {{ $node[\"Thời tiết\"].json.wind.speed ?? \"không có thông tin\" }} m/s\n    - Góc độ: {{ $node[\"Thời tiết\"].json.wind.deg ?? \"không có thông tin\" }}°\n  - Thành phố: {{ $node[\"Thời tiết\"].json.name ?? \"không có thông tin\" }} \n\n## 2. Nhận thông tin chất lượng không khí Hà Nội hiện tại ở đây:\n  - Chỉ số chất lượng không khí tổng hợp theo thang điểm từ 1 đến 5 (Tốt → Rất xấu): {{ $node[\"Chất lượng không khí\"].json.list[0].main.aqi ?? \"không có thông tin\" }}\n  - Nồng độ từng chất ô nhiễm:\n    - Carbon monoxide (CO) – khí CO: {{ $node[\"Chất lượng không khí\"].json.list[0].components.co ?? \"không có thông tin\" }} μg/m³\n    - Nitric oxide (NO): {{ $node[\"Chất lượng không khí\"].json.list[0].components.no ?? \"không có thông tin\" }} μg/m³\n    - Nitrogen dioxide (NO₂): {{ $node[\"Chất lượng không khí\"].json.list[0].components.no2 }} μg/m³\n    - Ozone (O₃): {{ $node[\"Chất lượng không khí\"].json.list[0].components.o3 }} μg/m³\n    - Sulfur dioxide (SO₂): {{ $node[\"Chất lượng không khí\"].json.list[0].components.so2 }} μg/m³\n    - Particulate Matter ≤ 2.5 μm: {{ $node[\"Chất lượng không khí\"].json.list[0].components.pm2_5 }} μg/m³\n    - Particulate Matter ≤ 10 μm: {{ $node[\"Chất lượng không khí\"].json.list[0].components.pm10 }} μg/m³\n    - Ammonia (NH₃): {{ $node[\"Chất lượng không khí\"].json.list[0].components.nh3 }} μg/m³\n\n## 3. Nhận tinh tức về tin nóng tại đây (luôn đính kèm link):\n- {{ $node[\"Extract top news\"].json.news[0].title }} | ({{ $node[\"Extract top news\"].json.news[0].link }})\n- {{ $node[\"Extract top news\"].json.news[1].title }} | ({{ $node[\"Extract top news\"].json.news[1].link }})\n- {{ $node[\"Extract top news\"].json.news[2].title }} | ({{ $node[\"Extract top news\"].json.news[2].link }})"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        224,
+        -192
+      ],
+      "id": "ba21da4c-da42-44a2-abe8-ea3def61c810",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "9fd962b7-b099-41ca-b237-16994fe68234",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "8AQaEqynduZ2uZjq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1444161499454242897/H41WVL64h58KyoJ7uiN2hlKQ42HS4xjyVozDlcgHxcoCIldNfj1mrEzZf-iTkGDyAbz5",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ content: $json.output }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        544,
+        -192
+      ],
+      "id": "2fefc1ad-a5c8-433a-b142-fe89d9465c66",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.openweathermap.org/data/2.5/weather?lat=21.0535&lon=105.7680&appid=b4a3cd64d90a4602645dcaee835cd848&units=metric&lang=vi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        -192
+      ],
+      "id": "8568fbe7-47f8-4dbf-a5b3-4259abcefdfd",
+      "name": "Thời tiết"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/air_pollution?lat=21.0535&lon=105.7680&appid=b4a3cd64d90a4602645dcaee835cd848",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -560,
+        -192
+      ],
+      "id": "76c0f2ed-8668-4992-8aaa-d872919bb56d",
+      "name": "Chất lượng không khí",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "3qancDC0YJZ9UPtG",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1024,
+        -288
+      ],
+      "id": "fe225009-e325-4685-88ba-321c921ccaad",
+      "name": "7h sáng"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 17 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1024,
+        -96
+      ],
+      "id": "dc451c89-6e84-4109-906f-1e6e8a891172",
+      "name": "17h30 chiều"
+    },
+    {
+      "parameters": {
+        "url": "https://vnexpress.net/rss/tin-moi-nhat.rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -368,
+        -192
+      ],
+      "id": "e567d413-383d-4b58-84bd-4b6f31ef09cb",
+      "name": "Tin tức nóng"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        -192
+      ],
+      "id": "013025b1-f92b-43af-9833-9b3ae4add640",
+      "name": "XML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const itemsRss = $json.rss.channel.item || [];\n\nconst top3 = itemsRss.slice(0, 3).map(i => ({\n  title: i.title,\n  link: i.link,\n  description: i.description,\n  time: i.pubDate,\n}));\n\nreturn [{ news: top3 }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -192
+      ],
+      "id": "03254568-3865-4e0f-b46b-05e0da0b1499",
+      "name": "Extract top news"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thời tiết": {
+      "main": [
+        [
+          {
+            "node": "Chất lượng không khí",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chất lượng không khí": {
+      "main": [
+        [
+          {
+            "node": "Tin tức nóng",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7h sáng": {
+      "main": [
+        [
+          {
+            "node": "Thời tiết",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17h30 chiều": {
+      "main": [
+        [
+          {
+            "node": "Thời tiết",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tin tức nóng": {
+      "main": [
+        [
+          {
+            "node": "XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML": {
+      "main": [
+        [
+          {
+            "node": "Extract top news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract top news": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "6c279493-b328-4c4d-8e08-927fb1a2f725",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "67534af437efa5165e25d003201af87d70458beaab49b0ff46239ccc37a470e0"
+  },
+  "id": "hwzLrM5C8ArERQoR",
+  "tags": []
+}
