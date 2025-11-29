@@ -1,0 +1,37 @@
+name: Auto Weather & News Bot
+
+on:
+  schedule:
+    # 7:00 sáng (UTC+7 = 00:00 UTC)
+    - cron: "0 0 * * *"
+    # 17:30 chiều (UTC+7 = 10:30 UTC)
+    - cron: "30 10 * * *"
+  workflow_dispatch:  # Cho phép chạy thủ công
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run automation script
+        env:
+          OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+          AQI_API_KEY: ${{ secrets.AQI_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LAT: "21.0535"
+          LON: "105.7446"
+        run: python AUTOMATION_TASK.py
